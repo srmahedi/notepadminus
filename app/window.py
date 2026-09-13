@@ -248,7 +248,7 @@ class MainWindow(_ResizableFramelessWindow):
         self._modified = False
         self._encoding = "UTF-8"
         self._line_ending = "CRLF"
-        self._find_widget: FindReplaceDialog | None = None
+        self._find_dialog: FindReplaceDialog | None = None
 
         # Services
         self._settings = Settings()
@@ -303,9 +303,6 @@ class MainWindow(_ResizableFramelessWindow):
         # Editor
         self._editor = CodeEditor(self._spell_engine, self)
         root.addWidget(self._editor, 1)
-
-        # Install resize-event observer so the find widget tracks editor size
-        self._editor.installEventFilter(self)
 
         # Status bar
         self._status_bar = QStatusBar(self)
@@ -672,14 +669,13 @@ class MainWindow(_ResizableFramelessWindow):
             self._editor.ensureCursorVisible()
 
     def _show_find(self):
-        if self._find_widget is None:
-            self._find_widget = FindReplaceDialog(self._editor, self._editor)
-        # Pre-fill with selected text (single-line selections only)
+        if self._find_dialog is None:
+            self._find_dialog = FindReplaceDialog(self._editor, self)
+        # Pre-fill with selected text
         cur = self._editor.textCursor()
-        selected = cur.selectedText() if cur.hasSelection() else ""
-        if "\u2029" in selected:   # Qt paragraph separator = multi-line; skip
-            selected = ""
-        self._find_widget.show_and_focus(selected)
+        if cur.hasSelection():
+            self._find_dialog.set_search_term(cur.selectedText())
+        self._find_dialog.show_and_focus()
 
     def _insert_datetime(self):
         from datetime import datetime
@@ -841,14 +837,6 @@ class MainWindow(_ResizableFramelessWindow):
                 self._title_bar._btn_max.setText("❐")
             else:
                 self._title_bar._btn_max.setText("□")
-
-    def eventFilter(self, watched, event):
-        """Reposition the inline find widget when the editor is resized."""
-        from PyQt6.QtCore import QEvent
-        if watched is self._editor and event.type() == QEvent.Type.Resize:
-            if self._find_widget is not None and self._find_widget.isVisible():
-                self._find_widget._reposition()
-        return super().eventFilter(watched, event)
 
     def keyPressEvent(self, event):
         # Extra global shortcuts
