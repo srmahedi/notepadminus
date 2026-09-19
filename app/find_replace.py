@@ -1,21 +1,21 @@
 """
 Find & Replace dialog with regex, case-sensitive, whole word, wrap options.
+VS Code-style widget positioned at top of editor.
 """
 
 import re
-from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QTextCursor, QTextDocument
+from PyQt6.QtCore import Qt, pyqtSignal, QPropertyAnimation, QEasingCurve, QPoint
+from PyQt6.QtGui import QTextCursor, QTextDocument, QKeySequence
 from PyQt6.QtWidgets import (
     QCheckBox,
     QDialog,
-    QGridLayout,
     QHBoxLayout,
     QLabel,
     QLineEdit,
     QPushButton,
     QVBoxLayout,
     QWidget,
-    QGroupBox,
+    QToolButton,
 )
 
 
@@ -23,151 +23,233 @@ class FindReplaceDialog(QDialog):
     def __init__(self, editor, parent=None):
         super().__init__(parent, Qt.WindowType.Tool | Qt.WindowType.FramelessWindowHint)
         self._editor = editor
-        self.setWindowTitle("Find & Replace")
-        self.setMinimumWidth(440)
+        self.setWindowTitle("Find")
+        self.setFixedHeight(34)  # VS Code default height
+        self.setMinimumWidth(300)
         self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint)
-        self._drag_pos = None
+        self._replace_visible = False
+        self._match_count = 0
+        self._current_match_index = 0
         self._build_ui()
+        self._position_widget()
 
     def _build_ui(self):
-        # Master layout
-        master_layout = QVBoxLayout(self)
-        master_layout.setContentsMargins(0, 0, 0, 0)
-        master_layout.setSpacing(0)
-
-        # ── Custom Dialog Title Bar
-        title_bar = QWidget()
-        title_bar.setObjectName("DialogTitleBar")
-        title_bar.setFixedHeight(32)
-        title_bar.setStyleSheet("""
-            QWidget#DialogTitleBar {
-                background-color: #16161C;
-                border-bottom: 1px solid #2D2D3F;
+        # VS Code style - dark widget at top of editor
+        self.setStyleSheet("""
+            QDialog {
+                background-color: #252526;
+                border: 1px solid #454545;
+                border-radius: 6px;
             }
         """)
 
-        tb_layout = QHBoxLayout(title_bar)
-        tb_layout.setContentsMargins(12, 0, 0, 0)
-        tb_layout.setSpacing(0)
+        # Main vertical layout to support find + replace rows
+        main_layout = QVBoxLayout(self)
+        main_layout.setContentsMargins(0, 0, 0, 0)
+        main_layout.setSpacing(0)
 
-        title_lbl = QLabel("Find & Replace")
-        title_lbl.setStyleSheet("color: #CCCCDD;")
-        tb_layout.addWidget(title_lbl)
-        tb_layout.addStretch(1)
+        # Find row
+        find_row = QHBoxLayout()
+        find_row.setContentsMargins(9, 4, 4, 4)
+        find_row.setSpacing(3)
 
-        close_btn = QPushButton("\u00D7")
-        close_btn.setFixedSize(36, 32)
-        close_btn.setStyleSheet("""
-            QPushButton {
+        # Find input
+        self._find_edit = QLineEdit()
+        self._find_edit.setPlaceholderText("Find")
+        self._find_edit.setFixedHeight(25)
+        self._find_edit.setMinimumWidth(150)
+        self._find_edit.setStyleSheet("""
+            QLineEdit {
+                background-color: #3C3C3C;
+                border: 1px solid #3C3C3C;
+                border-radius: 2px;
+                color: #CCCCCC;
+                padding: 2px 6px;
+                font-size: 13px;
+            }
+            QLineEdit:focus {
+                border: 1px solid #3C3C3C;
+            }
+        """)
+        self._find_edit.returnPressed.connect(self._find_next)
+        find_row.addWidget(self._find_edit)
+
+        # Navigation buttons
+        self._btn_prev = QToolButton()
+        self._btn_prev.setText("▲")
+        self._btn_prev.setFixedSize(22, 22)
+        self._btn_prev.setStyleSheet(self._button_style())
+        self._btn_prev.setToolTip("Previous Match (Shift+Enter)")
+        self._btn_prev.clicked.connect(self._find_prev)
+        find_row.addWidget(self._btn_prev)
+
+        self._btn_next = QToolButton()
+        self._btn_next.setText("▼")
+        self._btn_next.setFixedSize(22, 22)
+        self._btn_next.setStyleSheet(self._button_style())
+        self._btn_next.setToolTip("Next Match (Enter)")
+        self._btn_next.clicked.connect(self._find_next)
+        find_row.addWidget(self._btn_next)
+
+        # Match count
+        self._match_count_label = QLabel("No results")
+        self._match_count_label.setStyleSheet("color: #858585; font-size: 12px; padding: 0 4px;")
+        find_row.addWidget(self._match_count_label)
+
+        # Option buttons
+        self._btn_case = QToolButton()
+        self._btn_case.setText("Aa")
+        self._btn_case.setCheckable(True)
+        self._btn_case.setFixedSize(22, 22)
+        self._btn_case.setStyleSheet(self._toggle_button_style())
+        self._btn_case.setToolTip("Match Case (Alt+C)")
+        find_row.addWidget(self._btn_case)
+
+        self._btn_word = QToolButton()
+        self._btn_word.setText("Ab")
+        self._btn_word.setCheckable(True)
+        self._btn_word.setFixedSize(22, 22)
+        self._btn_word.setStyleSheet(self._toggle_button_style())
+        self._btn_word.setToolTip("Match Whole Word (Alt+W)")
+        find_row.addWidget(self._btn_word)
+
+        self._btn_regex = QToolButton()
+        self._btn_regex.setText(".*")
+        self._btn_regex.setCheckable(True)
+        self._btn_regex.setFixedSize(22, 22)
+        self._btn_regex.setStyleSheet(self._toggle_button_style())
+        self._btn_regex.setToolTip("Use Regular Expression (Alt+R)")
+        find_row.addWidget(self._btn_regex)
+
+        # Replace toggle button
+        self._btn_toggle_replace = QToolButton()
+        self._btn_toggle_replace.setText("⇄")
+        self._btn_toggle_replace.setCheckable(True)
+        self._btn_toggle_replace.setFixedSize(22, 22)
+        self._btn_toggle_replace.setStyleSheet(self._toggle_button_style())
+        self._btn_toggle_replace.setToolTip("Toggle Replace")
+        self._btn_toggle_replace.toggled.connect(self._toggle_replace)
+        find_row.addWidget(self._btn_toggle_replace)
+
+        # Close button
+        close_btn = QToolButton()
+        close_btn.setText("×")
+        close_btn.setFixedSize(22, 22)
+        close_btn.setStyleSheet(self._button_style())
+        close_btn.setToolTip("Close (Escape)")
+        close_btn.clicked.connect(self.close)
+        find_row.addWidget(close_btn)
+
+        main_layout.addLayout(find_row)
+
+        # Replace section (initially hidden)
+        self._replace_widget = QWidget()
+        replace_layout = QHBoxLayout(self._replace_widget)
+        replace_layout.setContentsMargins(9, 0, 4, 4)
+        replace_layout.setSpacing(3)
+
+        self._replace_edit = QLineEdit()
+        self._replace_edit.setPlaceholderText("Replace")
+        self._replace_edit.setFixedHeight(25)
+        self._replace_edit.setMinimumWidth(150)
+        self._replace_edit.setStyleSheet("""
+            QLineEdit {
+                background-color: #3C3C3C;
+                border: 1px solid #3C3C3C;
+                border-radius: 2px;
+                color: #CCCCCC;
+                padding: 2px 6px;
+                font-size: 13px;
+            }
+            QLineEdit:focus {
+                border: 1px solid #3C3C3C;
+            }
+        """)
+        replace_layout.addWidget(self._replace_edit)
+
+        self._btn_replace = QToolButton()
+        self._btn_replace.setText("Replace")
+        self._btn_replace.setFixedSize(70, 22)
+        self._btn_replace.setStyleSheet(self._button_style())
+        self._btn_replace.setToolTip("Replace (Enter)")
+        self._btn_replace.clicked.connect(self._replace_once)
+        replace_layout.addWidget(self._btn_replace)
+
+        self._btn_replace_all = QToolButton()
+        self._btn_replace_all.setText("Replace All")
+        self._btn_replace_all.setFixedSize(70, 22)
+        self._btn_replace_all.setStyleSheet(self._button_style())
+        self._btn_replace_all.setToolTip("Replace All")
+        self._btn_replace_all.clicked.connect(self._replace_all)
+        replace_layout.addWidget(self._btn_replace_all)
+
+        self._replace_widget.hide()
+        main_layout.addWidget(self._replace_widget)
+
+        # Connections
+        self._find_edit.textChanged.connect(self._on_find_text_changed)
+        self._btn_case.toggled.connect(self._on_find_text_changed)
+        self._btn_word.toggled.connect(self._on_find_text_changed)
+        self._btn_regex.toggled.connect(self._on_find_text_changed)
+
+    def _button_style(self):
+        return """
+            QToolButton {
                 background: transparent;
                 border: none;
-                color: #8888A0;
+                color: #858585;
+                border-radius: 3px;
+                font-size: 14px;
             }
-            QPushButton:hover {
-                background-color: #C0392B;
+            QToolButton:hover {
+                background-color: #3C3C3C;
                 color: #FFFFFF;
             }
-        """)
-        close_btn.clicked.connect(self.close)
-        tb_layout.addWidget(close_btn)
+        """
 
-        master_layout.addWidget(title_bar)
+    def _toggle_button_style(self):
+        return """
+            QToolButton {
+                background: transparent;
+                border: none;
+                color: #858585;
+                border-radius: 3px;
+                font-size: 11px;
+                font-weight: bold;
+            }
+            QToolButton:hover {
+                background-color: #3C3C3C;
+                color: #FFFFFF;
+            }
+            QToolButton:checked {
+                background-color: #3C3C3C;
+                color: #FFFFFF;
+            }
+        """
 
-        # ── Drag to move dialog handlers
-        def tb_mousePress(event):
-            if event.button() == Qt.MouseButton.LeftButton:
-                self._drag_pos = event.globalPosition().toPoint() - self.frameGeometry().topLeft()
+    def _position_widget(self):
+        """Position widget at top-right of editor like VS Code"""
+        if self.parent():
+            parent_geom = self.parent().geometry()
+            # Position at top right with some margin
+            x = parent_geom.x() + parent_geom.width() - 450
+            y = parent_geom.y() + 10
+            self.move(x, y)
 
-        def tb_mouseMove(event):
-            if (event.buttons() & Qt.MouseButton.LeftButton) and self._drag_pos is not None:
-                self.move(event.globalPosition().toPoint() - self._drag_pos)
-
-        def tb_mouseRelease(event):
-            self._drag_pos = None
-
-        title_bar.mousePressEvent = tb_mousePress
-        title_bar.mouseMoveEvent = tb_mouseMove
-        title_bar.mouseReleaseEvent = tb_mouseRelease
-
-        # ── Dialog body
-        body = QWidget()
-        layout = QVBoxLayout(body)
-        layout.setSpacing(10)
-        layout.setContentsMargins(16, 16, 16, 16)
-        master_layout.addWidget(body)
-
-        # ── Input fields
-        grid = QGridLayout()
-        grid.setColumnStretch(1, 1)
-        grid.setHorizontalSpacing(10)
-        grid.setVerticalSpacing(8)
-
-        grid.addWidget(QLabel("Find:"), 0, 0)
-        self._find_edit = QLineEdit()
-        self._find_edit.setPlaceholderText("Search text…")
-        self._find_edit.returnPressed.connect(self._find_next)
-        grid.addWidget(self._find_edit, 0, 1)
-
-        grid.addWidget(QLabel("Replace:"), 1, 0)
-        self._replace_edit = QLineEdit()
-        self._replace_edit.setPlaceholderText("Replacement text…")
-        grid.addWidget(self._replace_edit, 1, 1)
-
-        layout.addLayout(grid)
-
-        # ── Options
-        opts_box = QGroupBox("Options")
-        opts_layout = QHBoxLayout(opts_box)
-        opts_layout.setSpacing(16)
-
-        self._case_cb = QCheckBox("Match &Case")
-        self._whole_cb = QCheckBox("Whole &Word")
-        self._regex_cb = QCheckBox("Re&gex")
-        self._wrap_cb = QCheckBox("&Wrap Around")
-        self._wrap_cb.setChecked(True)
-
-        for w in (self._case_cb, self._whole_cb, self._regex_cb, self._wrap_cb):
-            opts_layout.addWidget(w)
-        opts_layout.addStretch()
-
-        layout.addWidget(opts_box)
-
-        # ── Status label
-        self._status = QLabel("")
-        self._status.setStyleSheet("color: #888899;")
-        layout.addWidget(self._status)
-
-        # ── Buttons
-        btn_layout = QHBoxLayout()
-        btn_layout.setSpacing(8)
-
-        self._btn_prev = QPushButton("◀  Previous")
-        self._btn_next = QPushButton("Next  ▶")
-        self._btn_replace = QPushButton("Replace")
-        self._btn_replace_all = QPushButton("Replace All")
-        self._btn_close = QPushButton("Close")
-
-        self._btn_next.setDefault(True)
-
-        for btn in (self._btn_prev, self._btn_next, self._btn_replace,
-                    self._btn_replace_all, self._btn_close):
-            btn_layout.addWidget(btn)
-
-        layout.addLayout(btn_layout)
-
-        # ── Connections
-        self._btn_next.clicked.connect(self._find_next)
-        self._btn_prev.clicked.connect(self._find_prev)
-        self._btn_replace.clicked.connect(self._replace_once)
-        self._btn_replace_all.clicked.connect(self._replace_all)
-        self._btn_close.clicked.connect(self.close)
-        self._find_edit.textChanged.connect(lambda _: self._status.setText(""))
+    def _toggle_replace(self, checked):
+        """Toggle replace section visibility"""
+        if checked:
+            self._replace_widget.show()
+            self.setFixedHeight(62)  # Find row + replace row
+        else:
+            self._replace_widget.hide()
+            self.setFixedHeight(34)  # Just find row
 
     # ── Helpers ──────────────────────────────────────────────────────────────
 
     def _build_flags(self) -> re.RegexFlag:
         flags = re.MULTILINE
-        if not self._case_cb.isChecked():
+        if not self._btn_case.isChecked():
             flags |= re.IGNORECASE
         return flags
 
@@ -175,15 +257,15 @@ class FindReplaceDialog(QDialog):
         if not text:
             return None
         try:
-            if self._regex_cb.isChecked():
+            if self._btn_regex.isChecked():
                 pat = text
             else:
                 pat = re.escape(text)
-            if self._whole_cb.isChecked():
+            if self._btn_word.isChecked():
                 pat = r"\b" + pat + r"\b"
             return re.compile(pat, self._build_flags())
         except re.error as e:
-            self._status.setText(f"Regex error: {e}")
+            self._match_count_label.setText(f"Regex error")
             return None
 
     def _get_text(self) -> str:
@@ -209,13 +291,13 @@ class FindReplaceDialog(QDialog):
         text = self._get_text()
         pos = self._current_pos()
         m = pattern.search(text, pos)
-        if m is None and self._wrap_cb.isChecked():
+        if m is None:
             m = pattern.search(text, 0)
         if m:
             self._set_selection(m.start(), m.end())
-            self._status.setText("")
+            self._update_match_count(pattern, text, m.start())
         else:
-            self._status.setText("No matches found.")
+            self._match_count_label.setText("No results")
 
     def _find_prev(self):
         pattern = self._make_pattern(self._find_edit.text())
@@ -225,14 +307,14 @@ class FindReplaceDialog(QDialog):
         cur = self._editor.textCursor()
         pos = cur.selectionStart()
         matches = list(pattern.finditer(text, 0, pos))
-        if not matches and self._wrap_cb.isChecked():
+        if not matches:
             matches = list(pattern.finditer(text))
         if matches:
             m = matches[-1]
             self._set_selection(m.start(), m.end())
-            self._status.setText("")
+            self._update_match_count(pattern, text, m.start())
         else:
-            self._status.setText("No matches found.")
+            self._match_count_label.setText("No results")
 
     def _replace_once(self):
         pattern = self._make_pattern(self._find_edit.text())
@@ -259,9 +341,38 @@ class FindReplaceDialog(QDialog):
             cur = self._editor.textCursor()
             cur.select(QTextCursor.SelectionType.Document)
             cur.insertText(new_text)
-            self._status.setText(f"Replaced {count} occurrence(s).")
+            self._match_count_label.setText(f"Replaced {count}")
         else:
-            self._status.setText("No matches found.")
+            self._match_count_label.setText("No results")
+
+    def _update_match_count(self, pattern, text, current_pos):
+        """Update match count display in VS Code style (e.g., '1 of 5')"""
+        matches = list(pattern.finditer(text))
+        total = len(matches)
+        if total == 0:
+            self._match_count_label.setText("No results")
+        else:
+            # Find current match index
+            current_index = 0
+            for i, m in enumerate(matches):
+                if m.start() == current_pos:
+                    current_index = i + 1
+                    break
+            self._match_count_label.setText(f"{current_index} of {total}")
+
+    def _on_find_text_changed(self):
+        """Handle text change to update match count"""
+        pattern = self._make_pattern(self._find_edit.text())
+        if pattern:
+            text = self._get_text()
+            matches = list(pattern.finditer(text))
+            total = len(matches)
+            if total == 0:
+                self._match_count_label.setText("No results")
+            else:
+                self._match_count_label.setText(f"{total} results")
+        else:
+            self._match_count_label.setText("No results")
 
     # ── Public API ───────────────────────────────────────────────────────────
 
@@ -270,7 +381,24 @@ class FindReplaceDialog(QDialog):
         self._find_edit.selectAll()
 
     def show_and_focus(self):
+        self._position_widget()
         self.show()
         self.raise_()
+        self.activateWindow()
         self._find_edit.setFocus()
         self._find_edit.selectAll()
+        # Reset replace section to hidden when opening
+        self._btn_toggle_replace.setChecked(False)
+        self._replace_widget.hide()
+        self.setFixedHeight(34)
+
+    def keyPressEvent(self, event):
+        # Handle Escape key to close
+        if event.key() == Qt.Key.Key_Escape:
+            self.close()
+            return
+        # Handle Enter in replace field
+        if event.key() == Qt.Key.Key_Return and self._replace_edit.hasFocus():
+            self._replace_once()
+            return
+        super().keyPressEvent(event)

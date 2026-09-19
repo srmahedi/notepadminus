@@ -17,8 +17,8 @@ class _FramelessDialog(QDialog):
         title_bar.setFixedHeight(32)
         title_bar.setStyleSheet("""
             QWidget#DialogTitleBar {
-                background-color: #16161C;
-                border-bottom: 1px solid #2D2D3F;
+                background-color: #252526;
+                border-bottom: 1px solid #3C3C3C;
             }
         """)
 
@@ -27,7 +27,7 @@ class _FramelessDialog(QDialog):
         tb_layout.setSpacing(0)
 
         title_lbl = QLabel(self._title)
-        title_lbl.setStyleSheet("color: #CCCCDD;")
+        title_lbl.setStyleSheet("color: #CCCCCC;")
         tb_layout.addWidget(title_lbl)
         tb_layout.addStretch(1)
 
@@ -37,10 +37,10 @@ class _FramelessDialog(QDialog):
             QPushButton {
                 background: transparent;
                 border: none;
-                color: #8888A0;
+                color: #858585;
             }
             QPushButton:hover {
-                background-color: #C0392B;
+                background-color: #3C3C3C;
                 color: #FFFFFF;
             }
         """)
@@ -66,7 +66,7 @@ class _FramelessDialog(QDialog):
         title_bar.mouseReleaseEvent = tb_mouseRelease
 
 class DarkMessageBox(_FramelessDialog):
-    def __init__(self, parent=None, title="", text="", buttons=None, icon_color="#5B5BFF"):
+    def __init__(self, parent=None, title="", text="", buttons=None, icon_color="#858585"):
         super().__init__(parent, title)
         self.setMinimumWidth(380)
         
@@ -77,7 +77,7 @@ class DarkMessageBox(_FramelessDialog):
         self._setup_header(master_layout)
         
         body = QWidget()
-        body.setStyleSheet("background-color: #1A1A24; border: 1px solid #2E2E3E; border-top: none;")
+        body.setStyleSheet("background-color: #252526; border: 1px solid #3C3C3C; border-top: none;")
         body_layout = QVBoxLayout(body)
         body_layout.setContentsMargins(20, 20, 20, 16)
         body_layout.setSpacing(16)
@@ -93,7 +93,7 @@ class DarkMessageBox(_FramelessDialog):
         
         # Text
         self.text_lbl = QLabel(text)
-        self.text_lbl.setStyleSheet("color: #E0E0EE;")
+        self.text_lbl.setStyleSheet("color: #CCCCCC;")
         self.text_lbl.setWordWrap(True)
         content_layout.addWidget(self.text_lbl, 1)
         
@@ -113,7 +113,7 @@ class DarkMessageBox(_FramelessDialog):
             btn = QPushButton(text)
             if is_default:
                 btn.setDefault(True)
-            # Apply styling
+            btn.setStyleSheet(_BUTTON_STYLE)
             btn.clicked.connect(lambda checked=False, c=code: self.finish_dialog(c))
             btn_layout.addWidget(btn)
             
@@ -133,7 +133,7 @@ class DarkMessageBox(_FramelessDialog):
                 ("Don't Save", 2, False),
                 ("Cancel", 0, False)
             ],
-            icon_color="#FFAA44"
+            icon_color="#858585"
         )
         dialog.exec()
         return dialog.result_button
@@ -143,7 +143,7 @@ class DarkMessageBox(_FramelessDialog):
         dialog = cls(
             parent, title, text,
             buttons=[("OK", 1, True)],
-            icon_color="#FF4444"
+            icon_color="#858585"
         )
         dialog.exec()
         
@@ -152,7 +152,7 @@ class DarkMessageBox(_FramelessDialog):
         dialog = cls(
             parent, title, "",
             buttons=[("Close", 1, True)],
-            icon_color="#8B5CF6"
+            icon_color="#858585"
         )
         # Use HTML for text label
         dialog.text_lbl.setText(html_text)
@@ -170,13 +170,13 @@ class DarkInputDialog(_FramelessDialog):
         self._setup_header(master_layout)
         
         body = QWidget()
-        body.setStyleSheet("background-color: #1A1A24; border: 1px solid #2E2E3E; border-top: none;")
+        body.setStyleSheet("background-color: #252526; border: 1px solid #3C3C3C; border-top: none;")
         body_layout = QVBoxLayout(body)
         body_layout.setContentsMargins(20, 20, 20, 16)
         body_layout.setSpacing(12)
         
         lbl = QLabel(label_text)
-        lbl.setStyleSheet("color: #E0E0EE;")
+        lbl.setStyleSheet("color: #CCCCCC;")
         body_layout.addWidget(lbl)
         
         self.spin = QSpinBox()
@@ -191,9 +191,11 @@ class DarkInputDialog(_FramelessDialog):
         
         ok_btn = QPushButton("OK")
         ok_btn.setDefault(True)
+        ok_btn.setStyleSheet(_BUTTON_STYLE)
         ok_btn.clicked.connect(self.accept)
         
         cancel_btn = QPushButton("Cancel")
+        cancel_btn.setStyleSheet(_BUTTON_STYLE)
         cancel_btn.clicked.connect(self.reject)
         
         btn_layout.addWidget(ok_btn)
@@ -211,14 +213,14 @@ class DarkInputDialog(_FramelessDialog):
 
 _INPUT_STYLE = """
     QLineEdit, QSpinBox, QComboBox {
-        background-color: #111118;
-        border: 1px solid #3A3A50;
+        background-color: #3C3C3C;
+        border: 1px solid #3C3C3C;
         border-radius: 5px;
         padding: 6px 10px;
-        color: #E0E0EE;
+        color: #CCCCCC;
     }
     QLineEdit:focus, QSpinBox:focus, QComboBox:focus {
-        border-color: #5B5BFF;
+        border-color: #3C3C3C;
     }
     QComboBox::drop-down {
         border: none;
@@ -227,54 +229,54 @@ _INPUT_STYLE = """
         image: none;
         border-left: 5px solid transparent;
         border-right: 5px solid transparent;
-        border-top: 5px solid #8888A0;
+        border-top: 5px solid #858585;
         margin-right: 5px;
     }
 """
 
 _BUTTON_STYLE = """
     QPushButton {
-        background-color: #2D2D3F;
-        border: 1px solid #3A3A50;
+        background-color: #3C3C3C;
+        border: 1px solid #3C3C3C;
         border-radius: 5px;
         padding: 8px 16px;
-        color: #E0E0EE;
+        color: #CCCCCC;
         min-width: 80px;
     }
     QPushButton:hover {
-        background-color: #3D3D4F;
-        border-color: #5B5BFF;
+        background-color: #454545;
+        border-color: #454545;
     }
     QPushButton:pressed {
-        background-color: #1D1D2F;
+        background-color: #2D2D30;
     }
     QPushButton:default {
-        background-color: #5B5BFF;
-        border-color: #7B7BFF;
+        background-color: #3C3C3C;
+        border-color: #3C3C3C;
     }
     QPushButton:default:hover {
-        background-color: #6B6BFF;
+        background-color: #454545;
     }
 """
 
 _RADIO_STYLE = """
     QRadioButton {
-        color: #E0E0EE;
+        color: #CCCCCC;
         spacing: 8px;
     }
     QRadioButton::indicator {
         width: 16px;
         height: 16px;
-        border: 2px solid #3A3A50;
+        border: 2px solid #858585;
         border-radius: 8px;
-        background-color: #111118;
+        background-color: #3C3C3C;
     }
     QRadioButton::indicator:checked {
-        background-color: #5B5BFF;
-        border-color: #5B5BFF;
+        background-color: #3C3C3C;
+        border-color: #3C3C3C;
     }
     QRadioButton::indicator:hover {
-        border-color: #7B7BFF;
+        border-color: #858585;
     }
 """
 

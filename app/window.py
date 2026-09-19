@@ -57,13 +57,13 @@ class _TitleBar(QWidget):
         # App icon + title
         self._icon_label = QLabel("◧")
         self._icon_label.setStyleSheet(
-            "color: #8888FF; margin-right: 6px; background: transparent;"
+            "color: #CCCCCC; margin-right: 6px; background: transparent;"
         )
         layout.addWidget(self._icon_label)
 
         self._title_label = QLabel("Notepad Minus — Untitled")
         self._title_label.setStyleSheet(
-            "color: #CCCCDD; background: transparent;"
+            "color: #CCCCCC; background: transparent;"
         )
         layout.addWidget(self._title_label)
         layout.addStretch(1)
@@ -93,24 +93,24 @@ class _TitleBar(QWidget):
         self._btn_min.setFixedSize(46, 36)
         self._btn_min.setToolTip("Minimize")
         self._btn_min.setStyleSheet(_btn_common.format(
-            fg="#9090B0",
-            hbg="#2E2E44", hfg="#FFFFFF", pbg="#232338",
+            fg="#858585",
+            hbg="#3C3C3C", hfg="#FFFFFF", pbg="#2D2D30",
         ))
 
         self._btn_max = QPushButton("\u25A1")  # □ white square
         self._btn_max.setFixedSize(46, 36)
         self._btn_max.setToolTip("Maximize")
         self._btn_max.setStyleSheet(_btn_common.format(
-            fg="#9090B0",
-            hbg="#2E2E44", hfg="#FFFFFF", pbg="#232338",
+            fg="#858585",
+            hbg="#3C3C3C", hfg="#FFFFFF", pbg="#2D2D30",
         ))
 
         self._btn_close = QPushButton("\u00D7")  # × multiplication sign
         self._btn_close.setFixedSize(46, 36)
         self._btn_close.setToolTip("Close")
         self._btn_close.setStyleSheet(_btn_common.format(
-            fg="#9090B0",
-            hbg="#C0392B", hfg="#FFFFFF", pbg="#962D22",
+            fg="#858585",
+            hbg="#3C3C3C", hfg="#FFFFFF", pbg="#2D2D30",
         ))
 
         for btn in (self._btn_min, self._btn_max, self._btn_close):
@@ -289,7 +289,7 @@ class MainWindow(_ResizableFramelessWindow):
         # Menu bar
         self._menu_bar = QMenuBar(self)
         self._menu_bar.setStyleSheet(
-            "QMenuBar { background: #16161A; border-bottom: 1px solid #2A2A35; }"
+            "QMenuBar { background: #252526; border-bottom: 1px solid #3C3C3C; }"
         )
         root.addWidget(self._menu_bar)
 
@@ -410,7 +410,7 @@ class MainWindow(_ResizableFramelessWindow):
     def _build_toolbar(self):
         tb = self._toolbar
         tb.setStyleSheet(
-            "QToolBar { background: #16161A; border-bottom: 1px solid #2A2A35; "
+            "QToolBar { background: #252526; border-bottom: 1px solid #3C3C3C; "
             "padding: 2px 6px; spacing: 2px; }"
         )
 
@@ -445,11 +445,11 @@ class MainWindow(_ResizableFramelessWindow):
 
         for lbl in (self._lbl_pos, self._lbl_words, self._lbl_chars,
                     self._lbl_encoding, self._lbl_le, self._lbl_save):
-            lbl.setStyleSheet("color: #777788; padding: 0 10px;")
+            lbl.setStyleSheet("color: #858585; padding: 0 10px;")
 
-        self._lbl_save.setStyleSheet("color: #4CAF50; padding: 0 10px;")
+        self._lbl_save.setStyleSheet("color: #858585; padding: 0 10px;")
 
-        sep_style = "background: #2A2A35; max-width: 1px; min-width: 1px; min-height: 14px; max-height:14px; margin: 0 2px;"
+        sep_style = "background: #3C3C3C; max-width: 1px; min-width: 1px; min-height: 14px; max-height:14px; margin: 0 2px;"
 
         def sep():
             s = QFrame()
@@ -790,15 +790,15 @@ class MainWindow(_ResizableFramelessWindow):
 
     def _on_save_failed(self, err: str):
         self._lbl_save.setText("● Save Error")
-        self._lbl_save.setStyleSheet("color: #FF4444; padding: 0 10px;")
+        self._lbl_save.setStyleSheet("color: #858585; padding: 0 10px;")
 
     def _set_unsaved_indicator(self):
         self._lbl_save.setText("●  Unsaved")
-        self._lbl_save.setStyleSheet("color: #FFAA44; padding: 0 10px;")
+        self._lbl_save.setStyleSheet("color: #858585; padding: 0 10px;")
 
     def _flash_saved(self):
         self._lbl_save.setText("●  Saved")
-        self._lbl_save.setStyleSheet("color: #4CAF50; padding: 0 10px;")
+        self._lbl_save.setStyleSheet("color: #858585; padding: 0 10px;")
 
     def _update_status(self):
         ln, col = self._editor.current_line_col()

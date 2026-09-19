@@ -90,9 +90,9 @@ class CodeEditor(QPlainTextEdit):
     def _apply_selection_colors(self) -> None:
         """Ensure text selection contrasts with the dark editor background."""
         pal = self.palette()
-        pal.setColor(QPalette.ColorGroup.Active, QPalette.ColorRole.Highlight, QColor("#4A7AD9"))
+        pal.setColor(QPalette.ColorGroup.Active, QPalette.ColorRole.Highlight, QColor("#3C3C3C"))
         pal.setColor(QPalette.ColorGroup.Active, QPalette.ColorRole.HighlightedText, QColor("#FFFFFF"))
-        pal.setColor(QPalette.ColorGroup.Inactive, QPalette.ColorRole.Highlight, QColor("#355C94"))
+        pal.setColor(QPalette.ColorGroup.Inactive, QPalette.ColorRole.Highlight, QColor("#3C3C3C"))
         pal.setColor(QPalette.ColorGroup.Inactive, QPalette.ColorRole.HighlightedText, QColor("#FFFFFF"))
         self.setPalette(pal)
 
@@ -289,7 +289,7 @@ class CodeEditor(QPlainTextEdit):
 
     def line_number_area_paint_event(self, event):
         painter = QPainter(self._line_area)
-        painter.fillRect(event.rect(), QColor("#13131A"))
+        painter.fillRect(event.rect(), QColor("#252526"))
 
         block = self.firstVisibleBlock()
         block_number = block.blockNumber()
@@ -304,9 +304,9 @@ class CodeEditor(QPlainTextEdit):
             if block.isVisible() and bottom >= event.rect().top():
                 number = str(block_number + 1)
                 if block_number == current_line:
-                    painter.setPen(QColor("#dcdff2"))
+                    painter.setPen(QColor("#CCCCCC"))
                 else:
-                    painter.setPen(QColor("#6dace3"))
+                    painter.setPen(QColor("#858585"))
                 painter.setFont(self.font())
                 painter.drawText(
                     0, top,
@@ -326,7 +326,7 @@ class CodeEditor(QPlainTextEdit):
         extra = []
         if not self.isReadOnly():
             selection = QTextEdit.ExtraSelection()
-            line_color = QColor("#1E1E2E")
+            line_color = QColor("#2D2D30")
             selection.format.setBackground(line_color)
             selection.format.setProperty(
                 QTextCharFormat.Property.FullWidthSelection, True
