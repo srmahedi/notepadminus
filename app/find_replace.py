@@ -100,7 +100,7 @@ class FindReplaceDialog(QDialog):
         self._btn_case = QToolButton()
         self._btn_case.setText("Aa")
         self._btn_case.setCheckable(True)
-        self._btn_case.setFixedSize(22, 22)
+        self._btn_case.setFixedSize(28, 25)
         self._btn_case.setStyleSheet(self._toggle_button_style())
         self._btn_case.setToolTip("Match Case (Alt+C)")
         find_row.addWidget(self._btn_case)
@@ -108,7 +108,7 @@ class FindReplaceDialog(QDialog):
         self._btn_word = QToolButton()
         self._btn_word.setText("Ab")
         self._btn_word.setCheckable(True)
-        self._btn_word.setFixedSize(22, 22)
+        self._btn_word.setFixedSize(28, 25)
         self._btn_word.setStyleSheet(self._toggle_button_style())
         self._btn_word.setToolTip("Match Whole Word (Alt+W)")
         find_row.addWidget(self._btn_word)
@@ -116,7 +116,7 @@ class FindReplaceDialog(QDialog):
         self._btn_regex = QToolButton()
         self._btn_regex.setText(".*")
         self._btn_regex.setCheckable(True)
-        self._btn_regex.setFixedSize(22, 22)
+        self._btn_regex.setFixedSize(28, 25)
         self._btn_regex.setStyleSheet(self._toggle_button_style())
         self._btn_regex.setToolTip("Use Regular Expression (Alt+R)")
         find_row.addWidget(self._btn_regex)
@@ -211,18 +211,21 @@ class FindReplaceDialog(QDialog):
         return """
             QToolButton {
                 background: transparent;
-                border: none;
-                color: #858585;
+                border: 1px solid #454545;
+                color: #CCCCCC;
                 border-radius: 3px;
-                font-size: 11px;
+                font-size: 14px;
                 font-weight: bold;
+                padding: 2px;
             }
             QToolButton:hover {
                 background-color: #3C3C3C;
+                border-color: #555555;
                 color: #FFFFFF;
             }
             QToolButton:checked {
                 background-color: #3C3C3C;
+                border-color: #666666;
                 color: #FFFFFF;
             }
         """
@@ -231,9 +234,9 @@ class FindReplaceDialog(QDialog):
         """Position widget at top-right of editor like VS Code"""
         if self.parent():
             parent_geom = self.parent().geometry()
-            # Position at top right with some margin
+            # Position at top right with some margin, below title bar
             x = parent_geom.x() + parent_geom.width() - 450
-            y = parent_geom.y() + 10
+            y = parent_geom.y() + 35  # Moved down to avoid title bar
             self.move(x, y)
 
     def _toggle_replace(self, checked):
