@@ -323,18 +323,7 @@ class CodeEditor(QPlainTextEdit):
     # ── Current-line highlight ────────────────────────────────────────────────
 
     def _highlight_current_line(self):
-        extra = []
-        if not self.isReadOnly():
-            selection = QTextEdit.ExtraSelection()
-            line_color = QColor("#2D2D30")
-            selection.format.setBackground(line_color)
-            selection.format.setProperty(
-                QTextCharFormat.Property.FullWidthSelection, True
-            )
-            selection.cursor = self.textCursor()
-            selection.cursor.clearSelection()
-            extra.append(selection)
-        self.setExtraSelections(extra)
+        self.setExtraSelections([])
 
     # ── Key handling ─────────────────────────────────────────────────────────
 
